@@ -2,7 +2,7 @@ extern "C" {
     #include "jieba.h"
 }
 
-#include "cppjieba/MixSegment.hpp"
+#include "cppjieba/Jieba.hpp"
 #include "cppjieba/KeywordExtractor.hpp"
 
 using namespace std;
@@ -10,35 +10,38 @@ using namespace std;
 extern "C" {
 
 Jieba NewJieba(const char* dict_path, const char* hmm_path, const char* user_dict) {
-  Jieba handle = (Jieba)(new cppjieba::MixSegment(dict_path, hmm_path, user_dict));
+  Jieba handle = (Jieba)(new cppjieba::Jieba(dict_path, hmm_path, user_dict));
   return handle;
 }
 
 void FreeJieba(Jieba handle) {
-  cppjieba::MixSegment* x = (cppjieba::MixSegment*)handle;
+  cppjieba::Jieba* x = (cppjieba::Jieba*)handle;
   delete x;
 }
 
-char** Cut(Jieba handle, const char* sentence) {
-  cppjieba::MixSegment* x = (cppjieba::MixSegment*)handle;
+CJiebaWord* Cut(Jieba handle, const char* sentence, size_t len) {
+  cppjieba::Jieba* x = (cppjieba::Jieba*)handle;
   vector<string> words;
-  x->Cut(sentence, words);
-  char ** res = (char**)malloc(sizeof(char*) * (words.size() + 1));
+  string s(sentence, len);
+  x->Cut(s, words);
+  
+  CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
+  size_t offset = 0;
   for (size_t i = 0; i < words.size(); i++) {
-    res[i] = (char*)malloc(sizeof(char) * (words[i].length() + 1));
-    strcpy(res[i], words[i].c_str());
+    res[i].word = sentence + offset;
+    res[i].len = words[i].size();
+    offset += res[i].len;
   }
-  res[words.size()] = '\0';
+  if (offset != len) {
+    free(res);
+    return NULL;
+  }
+  res[words.size()].word = NULL;
+  res[words.size()].len = 0;
   return res;
 }
 
-void FreeWords(char** words) {
-  char** x = words;
-  while (x && *x) {
-    free(*x);
-    *x = NULL;
-    x ++;
-  }
+void FreeWords(CJiebaWord* words) {
   free(words);
 }
 
@@ -56,21 +59,25 @@ Extractor NewExtractor(const char* dict_path,
 }
 
 void FreeExtractor(Extractor handle) {
-  cppjieba::MixSegment* x = (cppjieba::MixSegment*)handle;
+  cppjieba::KeywordExtractor* x = (cppjieba::KeywordExtractor*)handle;
   delete x;
 }
 
-char** Extract(Extractor handle, const char* sentence, int topn) {
+CJiebaWord* Extract(Extractor handle, const char* sentence, size_t len, size_t topn) {
   cppjieba::KeywordExtractor* x = (cppjieba::KeywordExtractor*)handle;
-  vector<string> words;
+  vector<cppjieba::KeywordExtractor::Word> words;
   x->Extract(sentence, words, topn);
-  char ** res = (char**)malloc(sizeof(char*) * (words.size() + 1));
+  CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
   for (size_t i = 0; i < words.size(); i++) {
-    res[i] = (char*)malloc(sizeof(char) * (words[i].length() + 1));
-    strcpy(res[i], words[i].c_str());
+    assert(words[i].offsets.size() > 0);
+    size_t offset = words[i].offsets[0];
+    assert(offset < len);
+    res[i].word = sentence + offset;
+    res[i].len = words[i].word.size();
   }
-  res[words.size()] = '\0';
+  res[words.size()].word = NULL;
+  res[words.size()].len = 0;
   return res;
 }
 
-}
+} // extern "C"
