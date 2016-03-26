@@ -19,23 +19,13 @@
 #include <ctype.h>
 #include <mysql/plugin_ftparser.h>
 #include <m_ctype.h>
+#include "./jieba.h"
 
 static const char* DICT_PATH = "/usr/share/dict/jieba.dict.utf8";
 static const char* HMM_MODEL = "/usr/share/dict/hmm_model.utf8";
 static const char* USER_DICT_PATH = "/usr/share/dict/user.dict.utf8";
 
-static long number_of_calls= 0; /* for SHOW STATUS, see below */
-
-/*
-  Simple full-text parser plugin that acts as a replacement for the
-  built-in full-text parser:
-  - All non-whitespace characters are significant and are interpreted as
-   "word characters."
-  - Whitespace characters are space, tab, CR, LF.
-  - There is no minimum word length.  Non-whitespace sequences of one
-    character or longer are words.
-  - Stopwords are used in non-boolean mode, not used in boolean mode.
-*/
+static void* jieba_hanlde = NULL;
 
 /*
   sqljieba interface functions:
@@ -52,7 +42,8 @@ static long number_of_calls= 0; /* for SHOW STATUS, see below */
 
 
 /*
-  Initialize the parser plugin at server start or plugin installation.
+  Initialize the plugin at server start or plugin installation.
+  NOTICE: when the DICT_PATH, HMM_MODEL, USER_DICT_PATH not found, NewJieba would log the error and exit without return anything .
 
   SYNOPSIS
     sqljieba_plugin_init()
@@ -67,25 +58,13 @@ static long number_of_calls= 0; /* for SHOW STATUS, see below */
 
 static int sqljieba_plugin_init(void *arg __attribute__((unused)))
 {
+  jieba_hanlde = NewJieba(DICT_PATH, HMM_MODEL, USER_DICT_PATH);
   return(0);
 }
 
-
-/*
-  Terminate the parser plugin at server shutdown or plugin deinstallation.
-
-  SYNOPSIS
-    sqljieba_plugin_deinit()
-    Does nothing.
-
-  RETURN VALUE
-    0                    success
-    1                    failure (cannot happen)
-
-*/
-
 static int sqljieba_plugin_deinit(void *arg __attribute__((unused)))
 {
+  FreeJieba(jieba_hanlde);
   return(0);
 }
 
@@ -176,25 +155,13 @@ static void add_word(MYSQL_FTPARSER_PARAM *param, char *word, size_t len)
 
 static int sqljieba_parse(MYSQL_FTPARSER_PARAM *param)
 {
-  char *end, *start, *docend= param->doc + param->length;
-
-  number_of_calls++;
-
-  for (end= start= param->doc;; end++)
-  {
-    if (end == docend)
-    {
-      if (end > start)
-        add_word(param, start, end - start);
-      break;
-    }
-    else if (my_isspace(param->cs, *end))
-    {
-      if (end > start)
-        add_word(param, start, end - start);
-      start= end + 1;
-    }
+  assert(jieba_hanlde);
+  CJiebaWord* words = Cut(jieba_hanlde, param->doc, param->length);
+  CJiebaWord* x;
+  for (x = words; x && x->word; x++) {
+    add_word(param, (char*)x->word, x->len);
   }
+  FreeWords(words);
   return(0);
 }
 
@@ -218,7 +185,6 @@ static struct st_mysql_ftparser sqljieba_descriptor=
 static struct st_mysql_show_var simple_status[]=
 {
   {"static",     (char *)"just a static text",     SHOW_CHAR, SHOW_SCOPE_GLOBAL},
-  {"called",     (char *)&number_of_calls, SHOW_LONG, SHOW_SCOPE_GLOBAL},
   {0,0,0, SHOW_SCOPE_GLOBAL}
 };
 

@@ -61,9 +61,7 @@ git clone git@github.com:yanyiwu/sqljieba.git
 cd sqljieba
 make
 
-cd ../../../build
-make -j `grep processor /proc/cpuinfo | wc -l` 
-sudo make install
+sudo cp libsqljieba.so /usr/local/mysql/lib/plugin/
 ```
 
 ```
@@ -155,6 +153,61 @@ EOF
 dbrootpwd=yanyiwu
 /usr/local/mysql/bin/mysql -e "grant all privileges on *.* to root@'127.0.0.1' identified by \"$dbrootpwd\" with grant option;"
 /usr/local/mysql/bin/mysql -e "grant all privileges on *.* to root@'localhost' identified by \"$dbrootpwd\" with grant option;"
+```
+
+login：
+
+```
+/usr/local/mysql/bin/mysql -u root -pyanyiwu
+```
+
+install plugin in client command:
+
+```
+install plugin sqljieba soname 'libsqljieba.so';
+```
+
+if errors happen, using the following command to check if the .so file exists
+
+```
+find /usr/local/mysql -name "libsqljieba.so"
+```
+
+if it exists, it should be there:
+
+```
+/usr/local/mysql/lib/plugin/libsqljieba.so
+```
+
+otherwise, you need to redo the process above and check what happened.
+
+if everything ok, now you can try the following sql:
+
+```
+mysql> create database sqljieba;
+Query OK, 1 row affected (0.04 sec)
+
+mysql> use sqljieba;
+Database changed
+mysql> CREATE TABLE t (c VARCHAR(255), FULLTEXT (c) WITH PARSER sqljieba ) ENGINE=MyISAM;
+Query OK, 0 rows affected (0.08 sec)
+
+mysql> INSERT INTO t VALUES
+    ->  ('这是一个简单测试'),
+    -> ('上海 广州 北京'),
+    ->  ('泰山 黄山 嵩山');
+Query OK, 3 rows affected (0.06 sec)
+Records: 3  Duplicates: 0  Warnings: 0
+
+mysql>  SELECT MATCH(c) AGAINST('上海') FROM t;
++----------------------------+
+| MATCH(c) AGAINST('上海')   |
++----------------------------+
+|                          0 |
+|         0.5647933483123779 |
+|                          0 |
++----------------------------+
+3 rows in set (0.04 sec)
 ```
 
 ## Reference

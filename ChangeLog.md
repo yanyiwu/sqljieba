@@ -2,4 +2,6 @@
 
 ## first version
 
-+ deps cppjieba v4.5.3
++ use [cjieba] v0.3.0
+
+[cjieba]:https://github.com/yanyiwu/cjieba
