@@ -3,7 +3,7 @@
 [![Author](https://img.shields.io/badge/author-@yanyiwu-blue.svg?style=flat)](http://yanyiwu.com/) 
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat)](http://yanyiwu.mit-license.org)
 
-[![logo](http://7viirv.com1.z0.glb.clouddn.com/sqljieba.jpg)](http://yanyiwu.com/work/2016/03/27/mysql-plugin-sqljieba.html)
+[![logo](http://7viirv.com1.z0.glb.clouddn.com/SqlJiebaLogo-v1.png)](http://yanyiwu.com/work/2016/03/27/mysql-plugin-sqljieba.html)
 
 ## Introduction
 
