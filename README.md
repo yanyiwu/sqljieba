@@ -64,6 +64,7 @@ cd sqljieba
 make
 
 sudo cp libsqljieba.so /usr/local/mysql/lib/plugin/
+sudo cp -r ./dict /usr/share
 ```
 
 ```
