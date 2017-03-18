@@ -8,22 +8,17 @@ Jieba NewJieba(const char* dict_path, const char* model_path, const char* user_d
 void FreeJieba(Jieba);
 
 typedef struct {
-  const char* word;
+  char* word;
   size_t len;
 } CJiebaWord;
 
-CJiebaWord* Cut(Jieba handle, const char* sentence, size_t len);
-CJiebaWord* CutForSearch(Jieba handle, const char* sentence, size_t len);
+typedef struct {
+  CJiebaWord* words;
+  size_t nwords;
+} CJiebaWordCollection;
 
-void FreeWords(CJiebaWord* words);
+CJiebaWordCollection* CutForSearch(Jieba handle, const char* sentence, size_t len);
 
-typedef void* Extractor;
-Extractor NewExtractor(const char* dict_path,
-      const char* hmm_path,
-      const char* idf_path,
-      const char* stop_word_path,
-      const char* user_dict_path);
-CJiebaWord* Extract(Extractor handle, const char* sentence, size_t len, size_t topn);
-void FreeExtractor(Extractor handle);
+void FreeWords(CJiebaWordCollection* collection);
 
 #endif

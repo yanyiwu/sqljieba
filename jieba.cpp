@@ -2,10 +2,13 @@ extern "C" {
     #include "jieba.h"
 }
 
+#include <string>
+#include <vector>
+#include <regex>
 #include "cppjieba/Jieba.hpp"
-#include "cppjieba/KeywordExtractor.hpp"
 
-using namespace std;
+using std::string;
+using std::vector;
 
 extern "C" {
 
@@ -19,87 +22,53 @@ void FreeJieba(Jieba handle) {
   delete x;
 }
 
-CJiebaWord* Cut(Jieba handle, const char* sentence, size_t len) {
+CJiebaWordCollection* CutForSearch(Jieba handle, const char* sentence, size_t len) {
   cppjieba::Jieba* x = (cppjieba::Jieba*)handle;
   vector<string> words;
-  string s(sentence, len);
-  x->Cut(s, words);
 
-  CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
-  size_t offset = 0;
-  for (size_t i = 0; i < words.size(); i++) {
-    res[i].word = sentence + offset;
-    res[i].len = words[i].size();
-    offset += res[i].len;
-  }
-  if (offset != len) {
-    free(res);
-    return NULL;
-  }
-  res[words.size()].word = NULL;
-  res[words.size()].len = 0;
-  return res;
-}
-
-CJiebaWord* CutForSearch(Jieba handle, const char* sentence, size_t len) {
-  cppjieba::Jieba* x = (cppjieba::Jieba*)handle;
-  vector<string> words;
   string s(sentence, len);
+  // Only keep letters, numbers, and Chinese characters
+  std::regex e1("[^\u2e80-\u3000\u3021-\ufe4fa-zA-Z0-9_]");
+  s = std::regex_replace(s, e1, " ");
+  // Combine multiple spaces to a single one
+  std::regex e2(" +");
+  s = std::regex_replace(s, e2, " ");
+
   x->CutForSearch(s, words);
 
-  CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
-  size_t offset = 0;
+  vector<size_t> ind;
+  ind.reserve(words.size() / 2 + 1);
   for (size_t i = 0; i < words.size(); i++) {
-    res[i].word = sentence + offset;
-    res[i].len = words[i].size();
-    offset += res[i].len;
+    if (words[i] != " ") {
+      ind.push_back(i);
+    }
   }
-  if (offset != len) {
-    free(res);
-    return NULL;
+
+  size_t nwords = ind.size();
+  CJiebaWord* res = new CJiebaWord[nwords];
+
+  for (size_t i = 0; i < nwords; i++) {
+    size_t idx = ind[i];
+    size_t len = words[idx].size();
+    res[i].word = new char[len + 1];
+    std::copy(words[idx].begin(), words[idx].end(), res[i].word);
+    res[i].word[len] = 0;
+    res[i].len = len;
   }
-  res[words.size()].word = NULL;
-  res[words.size()].len = 0;
-  return res;
+
+  CJiebaWordCollection* collection = new CJiebaWordCollection;
+  collection->words = res;
+  collection->nwords = nwords;
+
+  return collection;
 }
 
-void FreeWords(CJiebaWord* words) {
-  free(words);
-}
-
-Extractor NewExtractor(const char* dict_path,
-      const char* hmm_path,
-      const char* idf_path,
-      const char* stop_word_path,
-      const char* user_dict_path) {
-  Extractor handle = (Extractor)(new cppjieba::KeywordExtractor(dict_path,
-          hmm_path,
-          idf_path,
-          stop_word_path,
-          user_dict_path));
-  return handle;
-}
-
-void FreeExtractor(Extractor handle) {
-  cppjieba::KeywordExtractor* x = (cppjieba::KeywordExtractor*)handle;
-  delete x;
-}
-
-CJiebaWord* Extract(Extractor handle, const char* sentence, size_t len, size_t topn) {
-  cppjieba::KeywordExtractor* x = (cppjieba::KeywordExtractor*)handle;
-  vector<cppjieba::KeywordExtractor::Word> words;
-  x->Extract(sentence, words, topn);
-  CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
-  for (size_t i = 0; i < words.size(); i++) {
-    assert(words[i].offsets.size() > 0);
-    size_t offset = words[i].offsets[0];
-    assert(offset < len);
-    res[i].word = sentence + offset;
-    res[i].len = words[i].word.size();
+void FreeWords(CJiebaWordCollection* collection) {
+  for (size_t i = 0; i < collection->nwords; i++) {
+    delete [] collection->words[i].word;
   }
-  res[words.size()].word = NULL;
-  res[words.size()].len = 0;
-  return res;
+  delete [] collection->words;
+  delete collection;
 }
 
 } // extern "C"
