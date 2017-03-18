@@ -9,8 +9,8 @@ using namespace std;
 
 extern "C" {
 
-Jieba NewJieba(const char* dict_path, const char* hmm_path, const char* user_dict) {
-  Jieba handle = (Jieba)(new cppjieba::Jieba(dict_path, hmm_path, user_dict));
+Jieba NewJieba(const char* dict_path, const char* model_path, const char* user_dict_path, const char* idf_path, const char* stopword_path) {
+  Jieba handle = (Jieba)(new cppjieba::Jieba(dict_path, model_path, user_dict_path, idf_path, stopword_path));
   return handle;
 }
 
@@ -24,7 +24,7 @@ CJiebaWord* Cut(Jieba handle, const char* sentence, size_t len) {
   vector<string> words;
   string s(sentence, len);
   x->Cut(s, words);
-  
+
   CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
   size_t offset = 0;
   for (size_t i = 0; i < words.size(); i++) {
@@ -50,8 +50,8 @@ Extractor NewExtractor(const char* dict_path,
       const char* idf_path,
       const char* stop_word_path,
       const char* user_dict_path) {
-  Extractor handle = (Extractor)(new cppjieba::KeywordExtractor(dict_path, 
-          hmm_path, 
+  Extractor handle = (Extractor)(new cppjieba::KeywordExtractor(dict_path,
+          hmm_path,
           idf_path,
           stop_word_path,
           user_dict_path));

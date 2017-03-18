@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 typedef void* Jieba;
-Jieba NewJieba(const char* dict_path, const char* hmm_path, const char* user_dict);
+Jieba NewJieba(const char* dict_path, const char* model_path, const char* user_dict_path, const char* idf_path, const char* stopword_path);
 void FreeJieba(Jieba);
 
 typedef struct {
