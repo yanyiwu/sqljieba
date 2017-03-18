@@ -41,6 +41,28 @@ CJiebaWord* Cut(Jieba handle, const char* sentence, size_t len) {
   return res;
 }
 
+CJiebaWord* CutForSearch(Jieba handle, const char* sentence, size_t len) {
+  cppjieba::Jieba* x = (cppjieba::Jieba*)handle;
+  vector<string> words;
+  string s(sentence, len);
+  x->CutForSearch(s, words);
+
+  CJiebaWord* res = (CJiebaWord*)malloc(sizeof(CJiebaWord) * (words.size() + 1));
+  size_t offset = 0;
+  for (size_t i = 0; i < words.size(); i++) {
+    res[i].word = sentence + offset;
+    res[i].len = words[i].size();
+    offset += res[i].len;
+  }
+  if (offset != len) {
+    free(res);
+    return NULL;
+  }
+  res[words.size()].word = NULL;
+  res[words.size()].len = 0;
+  return res;
+}
+
 void FreeWords(CJiebaWord* words) {
   free(words);
 }

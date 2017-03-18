@@ -157,7 +157,7 @@ static void add_word(MYSQL_FTPARSER_PARAM *param, char *word, size_t len)
 static int sqljieba_parse(MYSQL_FTPARSER_PARAM *param)
 {
   assert(jieba_hanlde);
-  CJiebaWord* words = Cut(jieba_hanlde, param->doc, param->length);
+  CJiebaWord* words = CutForSearch(jieba_hanlde, param->doc, param->length);
   CJiebaWord* x;
   for (x = words; x && x->word; x++) {
     add_word(param, (char*)x->word, x->len);
