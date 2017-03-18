@@ -13,17 +13,18 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
-// First include (the generated) my_config.h, to get correct platform defines.
-#include "my_config.h"
 #include <stdlib.h>
 #include <ctype.h>
-#include <mysql/plugin_ftparser.h>
+#include <my_config.h>
 #include <m_ctype.h>
-#include "./jieba.h"
+#include <mysql/plugin_ftparser.h>
+#include "jieba.h"
 
-static const char* DICT_PATH = "/usr/share/dict/jieba.dict.utf8";
-static const char* HMM_MODEL = "/usr/share/dict/hmm_model.utf8";
+static const char* DICT_PATH      = "/usr/share/dict/jieba.dict.utf8";
+static const char* MODEL_PATH     = "/usr/share/dict/hmm_model.utf8";
 static const char* USER_DICT_PATH = "/usr/share/dict/user.dict.utf8";
+static const char* IDF_PATH       = "/usr/share/dict/idf.utf8";
+static const char* STOPWORD_PATH  = "/usr/share/dict/stop_words.utf8";
 
 static void* jieba_hanlde = NULL;
 
@@ -58,7 +59,7 @@ static void* jieba_hanlde = NULL;
 
 static int sqljieba_plugin_init(void *arg __attribute__((unused)))
 {
-  jieba_hanlde = NewJieba(DICT_PATH, HMM_MODEL, USER_DICT_PATH);
+  jieba_hanlde = NewJieba(DICT_PATH, MODEL_PATH, USER_DICT_PATH, IDF_PATH, STOPWORD_PATH);
   return(0);
 }
 
@@ -244,4 +245,3 @@ mysql_declare_plugin(ftexample)
   0,
 }
 mysql_declare_plugin_end;
-
