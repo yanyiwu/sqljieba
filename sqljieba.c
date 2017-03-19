@@ -37,8 +37,8 @@ static void* jieba_hanlde = NULL;
 
   Parser descriptor functions:
   - sqljieba_parse()
-  - sqljieba_init()
-  - sqljieba_deinit()
+  - sqljieba_parser_init()
+  - sqljieba_parser_deinit()
 */
 
 
@@ -74,7 +74,7 @@ static int sqljieba_plugin_deinit(void *arg __attribute__((unused)))
   Initialize the parser on the first use in the query
 
   SYNOPSIS
-    sqljieba_init()
+    sqljieba_parser_init()
 
   DESCRIPTION
     Does nothing.
@@ -84,8 +84,7 @@ static int sqljieba_plugin_deinit(void *arg __attribute__((unused)))
     1                    failure (cannot happen)
 */
 
-static int sqljieba_init(MYSQL_FTPARSER_PARAM *param
-                              __attribute__((unused)))
+static int sqljieba_parser_init(MYSQL_FTPARSER_PARAM *param)
 {
   return(0);
 }
@@ -95,7 +94,7 @@ static int sqljieba_init(MYSQL_FTPARSER_PARAM *param
   Terminate the parser at the end of the query
 
   SYNOPSIS
-    sqljieba_deinit()
+    sqljieba_parser_deinit()
 
   DESCRIPTION
     Does nothing.
@@ -105,8 +104,7 @@ static int sqljieba_init(MYSQL_FTPARSER_PARAM *param
     1                    failure (cannot happen)
 */
 
-static int sqljieba_deinit(MYSQL_FTPARSER_PARAM *param
-                                __attribute__((unused)))
+static int sqljieba_parser_deinit(MYSQL_FTPARSER_PARAM *param)
 {
   return(0);
 }
@@ -130,9 +128,15 @@ static int sqljieba_deinit(MYSQL_FTPARSER_PARAM *param
 
 static void add_word(MYSQL_FTPARSER_PARAM *param, char *word, size_t len)
 {
-  MYSQL_FTPARSER_BOOLEAN_INFO bool_info=
-    { FT_TOKEN_WORD, 0, 0, 0, 0, (word - param->doc), ' ', 0 };
+  /* It is difficult to get the position value, so we use 0 as a placeholder.
+     Fortunately bool_info is not used in the MyISAM engine. */
+  const int position = 0;
+  MYSQL_FTPARSER_BOOLEAN_INFO bool_info =
+    { FT_TOKEN_WORD, 0, 0, 0, 0, position, ' ', 0 };
 
+  /* Since word will later be freed, we need to tell MySQL
+     to make a copy of the word */
+  param->flags = MYSQL_FTFLAGS_NEED_COPY;
   param->mysql_add_word(param, word, len, &bool_info);
 }
 
@@ -156,13 +160,16 @@ static void add_word(MYSQL_FTPARSER_PARAM *param, char *word, size_t len)
 
 static int sqljieba_parse(MYSQL_FTPARSER_PARAM *param)
 {
-  assert(jieba_hanlde);
-  CJiebaWord* words = CutForSearch(jieba_hanlde, param->doc, param->length);
-  CJiebaWord* x;
-  for (x = words; x && x->word; x++) {
-    add_word(param, (char*)x->word, x->len);
+  /* If Jieba is not found, use the built-in parser */
+  if (!jieba_hanlde) {
+    return param->mysql_parse(param, param->doc, param->length);
   }
-  FreeWords(words);
+
+  CJiebaWordCollection* collection = CutForSearch(jieba_hanlde, param->doc, param->length);
+  for (size_t i = 0; i < collection->nwords; i++) {
+    add_word(param, collection->words[i].word, collection->words[i].len);
+  }
+  FreeWords(collection);
   return(0);
 }
 
@@ -171,76 +178,31 @@ static int sqljieba_parse(MYSQL_FTPARSER_PARAM *param)
   Plugin type-specific descriptor
 */
 
-static struct st_mysql_ftparser sqljieba_descriptor=
+static struct st_mysql_ftparser sqljieba_descriptor =
 {
   MYSQL_FTPARSER_INTERFACE_VERSION, /* interface version      */
-  sqljieba_parse,              /* parsing function       */
-  sqljieba_init,               /* parser init function   */
-  sqljieba_deinit              /* parser deinit function */
-};
-
-/*
-  Plugin status variables for SHOW STATUS
-*/
-
-static struct st_mysql_show_var simple_status[]=
-{
-  {"static",     (char *)"just a static text",     SHOW_CHAR, SHOW_SCOPE_GLOBAL},
-  {0,0,0, SHOW_SCOPE_GLOBAL}
-};
-
-/*
-  Plugin system variables.
-*/
-
-static long     sysvar_one_value;
-static char     *sysvar_two_value;
-
-static MYSQL_SYSVAR_LONG(simple_sysvar_one, sysvar_one_value,
-  PLUGIN_VAR_RQCMDARG,
-  "Simple fulltext parser example system variable number one. Give a number.",
-  NULL, NULL, 77L, 7L, 777L, 0);
-
-static MYSQL_SYSVAR_STR(simple_sysvar_two, sysvar_two_value,
-  PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_MEMALLOC,
-  "Simple fulltext parser example system variable number two. Give a string.",
-  NULL, NULL, "simple sysvar two default");
-
-static MYSQL_THDVAR_LONG(simple_thdvar_one,
-  PLUGIN_VAR_RQCMDARG,
-  "Simple fulltext parser example thread variable number one. Give a number.",
-  NULL, NULL, 88L, 8L, 888L, 0);
-
-static MYSQL_THDVAR_STR(simple_thdvar_two,
-  PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_MEMALLOC,
-  "Simple fulltext parser example thread variable number two. Give a string.",
-  NULL, NULL, "simple thdvar two default");
-
-static struct st_mysql_sys_var* simple_system_variables[]= {
-  MYSQL_SYSVAR(simple_sysvar_one),
-  MYSQL_SYSVAR(simple_sysvar_two),
-  MYSQL_SYSVAR(simple_thdvar_one),
-  MYSQL_SYSVAR(simple_thdvar_two),
-  NULL
+  sqljieba_parse,                   /* parsing function       */
+  sqljieba_parser_init,             /* parser init function   */
+  sqljieba_parser_deinit            /* parser deinit function */
 };
 
 /*
   Plugin library descriptor
 */
 
-mysql_declare_plugin(ftexample)
+mysql_declare_plugin(sqljieba)
 {
   MYSQL_FTPARSER_PLUGIN,      /* type                            */
-  &sqljieba_descriptor,  /* descriptor                      */
-  "sqljieba",            /* name                            */
-  "github.com/yanyiwu",              /* author                          */
-  "Jieba Full-Text Parser",  /* description                     */
+  &sqljieba_descriptor,       /* descriptor                      */
+  "sqljieba",                 /* name                            */
+  "github.com/yanyiwu",       /* author                          */
+  "Jieba Full-Text Parser",   /* description                     */
   PLUGIN_LICENSE_GPL,
-  sqljieba_plugin_init,  /* init function (when loaded)     */
-  sqljieba_plugin_deinit,/* deinit function (when unloaded) */
+  sqljieba_plugin_init,       /* init function (when loaded)     */
+  sqljieba_plugin_deinit,     /* deinit function (when unloaded) */
   0x0001,                     /* version                         */
-  simple_status,              /* status variables                */
-  simple_system_variables,    /* system variables                */
+  NULL,                       /* status variables                */
+  NULL,                       /* system variables                */
   NULL,
   0,
 }
