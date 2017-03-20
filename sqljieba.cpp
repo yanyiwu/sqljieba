@@ -1,6 +1,5 @@
 #include <vector>
 #include <string>
-#include <regex>
 #include <my_config.h>
 #include <m_ctype.h>
 #include <mysql/plugin_ftparser.h>
