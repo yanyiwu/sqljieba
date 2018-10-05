@@ -3,7 +3,7 @@
 [![Author](https://img.shields.io/badge/author-@yanyiwu-blue.svg?style=flat)](http://yanyiwu.com/) 
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat)](http://yanyiwu.mit-license.org)
 
-[![logo](http://7viirv.com1.z0.glb.clouddn.com/SqlJiebaLogo-v1.png)](http://yanyiwu.com/work/2016/03/27/mysql-plugin-sqljieba.html)
+[![logo](http://images.yanyiwu.com/SqlJiebaLogo-v1.png)](http://yanyiwu.com/work/2016/03/27/mysql-plugin-sqljieba.html)
 
 ## Introduction
 
@@ -222,7 +222,4 @@ mysql>  SELECT MATCH(c) AGAINST('上海') FROM t;
 + Email: `i@yanyiwu.com`
 + QQ: 64162451
 + WeChat: ![image](http://7viirv.com1.z0.glb.clouddn.com/5a7d1b5c0d_yanyiwu_personal_qrcodes.jpg)
-
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/yanyiwu/sqljieba/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 
